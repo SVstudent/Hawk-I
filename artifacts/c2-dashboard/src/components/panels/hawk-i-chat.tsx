@@ -72,54 +72,51 @@ function MdResponse({ content }: { content: string }) {
   return (
     <div
       className="md-response"
-      style={{ fontSize: '12px', lineHeight: '1.6', color: '#e0f7fa', fontFamily: 'monospace' }}
+      style={{ fontSize: '13px', lineHeight: '1.7', color: '#d9f7ee', fontFamily: 'Inter, sans-serif' }}
     >
       <ReactMarkdown
         components={{
           h1: ({ children }) => (
-            <div style={{ color: '#00ff88', fontWeight: 'bold', fontSize: '12px', letterSpacing: '0.08em', textTransform: 'uppercase', borderBottom: '1px solid rgba(0,255,136,0.18)', paddingBottom: '2px', marginBottom: '6px', marginTop: '4px' }}>{children}</div>
+            <div style={{ color: '#00ff88', fontWeight: 700, fontSize: '13px', letterSpacing: '0.08em', textTransform: 'uppercase', borderBottom: '1px solid rgba(0,255,136,0.18)', paddingBottom: '4px', marginBottom: '10px', marginTop: '6px' }}>{children}</div>
           ),
           h2: ({ children }) => (
-            <div style={{ color: '#00bcd4', fontWeight: 'bold', fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '4px', marginTop: '8px' }}>{children}</div>
+            <div style={{ color: '#00ff88', fontWeight: 700, fontSize: '12px', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '6px', marginTop: '12px' }}>{children}</div>
           ),
           h3: ({ children }) => (
-            <div style={{ color: '#a78bfa', fontWeight: 'bold', fontSize: '11px', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '3px', marginTop: '6px' }}>{children}</div>
+            <div style={{ color: '#7dd3fc', fontWeight: 700, fontSize: '11px', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '5px', marginTop: '10px' }}>{children}</div>
           ),
           p: ({ children }) => (
-            <p style={{ marginBottom: '6px', lineHeight: '1.6' }}>{children}</p>
+            <p style={{ marginBottom: '10px', lineHeight: '1.7', color: '#d9f7ee' }}>{children}</p>
           ),
           ul: ({ children }) => (
-            <ul style={{ marginBottom: '6px', display: 'flex', flexDirection: 'column', gap: '2px', listStyle: 'none', padding: 0 }}>{children}</ul>
+            <ul style={{ marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '6px', listStyle: 'disc', paddingLeft: '18px' }}>{children}</ul>
           ),
           ol: ({ children }) => (
-            <ol style={{ marginBottom: '6px', display: 'flex', flexDirection: 'column', gap: '2px', listStyle: 'none', padding: 0 }}>{children}</ol>
+            <ol style={{ marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '6px', listStyle: 'decimal', paddingLeft: '18px' }}>{children}</ol>
           ),
           li: ({ children }) => (
-            <li style={{ display: 'flex', gap: '6px', lineHeight: '1.55' }}>
-              <span style={{ color: '#00ff88', flexShrink: 0, fontWeight: 'bold' }}>›</span>
-              <span>{children}</span>
-            </li>
+            <li style={{ lineHeight: '1.65', color: '#d9f7ee', paddingLeft: '2px' }}>{children}</li>
           ),
           strong: ({ children }) => (
-            <strong style={{ color: '#ffffff', fontWeight: 'bold' }}>{children}</strong>
+            <strong style={{ color: '#ffffff', fontWeight: 700 }}>{children}</strong>
           ),
           em: ({ children }) => (
-            <em style={{ color: '#fb923c', fontStyle: 'normal', fontWeight: '600' }}>{children}</em>
+            <em style={{ color: '#93c5fd', fontStyle: 'normal', fontWeight: 600 }}>{children}</em>
           ),
           code: ({ children, className }) => {
             const isBlock = className?.includes('language-');
             return isBlock ? (
-              <code style={{ display: 'block', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(0,255,136,0.12)', color: '#00ff88', fontSize: '10px', padding: '4px 6px', margin: '4px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{children}</code>
+              <code style={{ display: 'block', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(0,255,136,0.12)', color: '#b6f7d8', fontSize: '11px', padding: '8px 10px', margin: '8px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-word', borderRadius: '2px', fontFamily: 'Fira Code, monospace' }}>{children}</code>
             ) : (
-              <code style={{ background: 'rgba(0,0,0,0.5)', color: '#00bcd4', fontSize: '11px', padding: '0 3px', border: '1px solid rgba(0,188,212,0.25)' }}>{children}</code>
+              <code style={{ background: 'rgba(0,0,0,0.45)', color: '#8be9fd', fontSize: '11px', padding: '1px 4px', border: '1px solid rgba(0,188,212,0.25)', borderRadius: '2px', fontFamily: 'Fira Code, monospace' }}>{children}</code>
             );
           },
           blockquote: ({ children }) => (
-            <blockquote style={{ borderLeft: '2px solid rgba(0,255,136,0.25)', paddingLeft: '8px', color: '#aaa', fontStyle: 'italic', margin: '4px 0' }}>{children}</blockquote>
+            <blockquote style={{ borderLeft: '2px solid rgba(0,255,136,0.25)', paddingLeft: '10px', color: '#a7c7bf', margin: '8px 0' }}>{children}</blockquote>
           ),
-          hr: () => <hr style={{ border: 'none', borderTop: '1px solid rgba(0,255,136,0.12)', margin: '8px 0' }} />,
+          hr: () => <hr style={{ border: 'none', borderTop: '1px solid rgba(0,255,136,0.12)', margin: '10px 0' }} />,
           a: ({ href, children }) => (
-            <a href={href} target="_blank" rel="noreferrer" style={{ color: '#00bcd4', textDecoration: 'underline' }}>{children}</a>
+            <a href={href} target="_blank" rel="noreferrer" style={{ color: '#7dd3fc', textDecoration: 'underline' }}>{children}</a>
           ),
         }}
       >
