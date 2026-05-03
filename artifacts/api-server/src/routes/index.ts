@@ -8,6 +8,7 @@ import ontologyRouter from "./ontology";
 import chatRouter from "./chat";
 import missionRouter from "./mission";
 import configRouter from "./config";
+import vesselsRouter from "./vessels";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(ontologyRouter);
 router.use(chatRouter);
 router.use(missionRouter);
 router.use(configRouter);
+router.use(vesselsRouter);
 
 export default router;

@@ -4,7 +4,7 @@ import { useDemo } from '@/demo/use-demo';
 import { DEMO_SCENES, SCENE_COUNT } from '@/demo/demo-scenes';
 
 export function BottomBar() {
-  const { data: status } = useGetOntologyStatus({ query: { refetchInterval: 10000 } });
+  const { data: status } = useGetOntologyStatus({ query: { refetchInterval: 10000 } as any });
   const { demoState, startDemo, stopDemo, resetDemo, pauseDemo, resumeDemo } = useDemo();
   const [timeStr, setTimeStr] = useState('');
   const prevSceneRef = useRef(0);
@@ -24,6 +24,7 @@ export function BottomBar() {
       const t = setTimeout(() => setFlashScene(false), 600);
       return () => clearTimeout(t);
     }
+    return undefined;
   }, [demoState.currentScene]);
 
   const datasets        = (status as any)?.datasets as Record<string, { ridConfigured: boolean }> | undefined;

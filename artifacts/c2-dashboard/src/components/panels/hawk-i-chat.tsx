@@ -162,6 +162,7 @@ export function HawkIChat() {
       const t = setTimeout(() => setPulse(false), 2000);
       return () => clearTimeout(t);
     }
+    return undefined;
   }, [demoState.currentScene, open]);
 
   const submit = useCallback(async (query: string) => {

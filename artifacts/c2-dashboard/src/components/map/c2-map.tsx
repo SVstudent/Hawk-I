@@ -55,6 +55,8 @@ const THREAT_COLORS_CSS: Record<string, string> = {
   critical: '#ff003c', high: '#ff6400', medium: '#ffc800', low: '#00c864',
 };
 
+const NO_DEPTH_TEST = { depthTest: false } as any;
+
 function hasWebGL(): boolean {
   try {
     const canvas = document.createElement('canvas');
@@ -177,6 +179,32 @@ const SHIPPING_LANES: ShippingLane[] = [
     ],
     color: [0, 200, 180, 45], width: 2,
   },
+  {
+    id: 'lane-hormuz-outbound', name: 'Hormuz Outbound Lane',
+    routeId: 'HORMUZ OUTBOUND LANE',
+    labelLng: 56.15, labelLat: 26.52,
+    path: [
+      [55.20, 26.80],
+      [56.00, 26.60],
+      [56.40, 26.35],
+      [56.80, 26.10],
+      [57.30, 25.60],
+    ],
+    color: [255, 180, 0, 65], width: 2,
+  },
+  {
+    id: 'lane-hormuz-inbound', name: 'Hormuz Inbound Lane',
+    routeId: 'HORMUZ INBOUND LANE',
+    labelLng: 56.05, labelLat: 26.08,
+    path: [
+      [57.30, 25.60],
+      [56.80, 25.90],
+      [56.40, 26.05],
+      [56.00, 26.10],
+      [55.20, 26.20],
+    ],
+    color: [0, 200, 255, 65], width: 2,
+  },
 ];
 
 interface Chokepoint {
@@ -202,6 +230,12 @@ const CHOKEPOINTS: Chokepoint[] = [
   { id: 'hudaydah',      name: 'Hudaydah (Houthi)',     short: 'HUDAYDAH',        lng: 42.95, lat: 14.80, type: 'port',      isHostile: true, cargoValue: 'HOSTILE CONTROLLED' },
   { id: 'port-said-ext', name: 'Port Said',             short: 'PORT SAID',       lng: 32.30, lat: 31.26, type: 'port',      cargoValue: 'CANAL ENTRY' },
   { id: 'muscat',        name: 'Muscat',                short: 'MUSCAT',          lng: 58.60, lat: 23.60, type: 'port',      cargoValue: 'LOGISTICS' },
+  { id: 'bandar-abbas',  name: 'Bandar Abbas Anchorage', short: 'BANDAR ABBAS',    lng: 56.30, lat: 27.10, type: 'port',      cargoValue: 'AIS ANCHORAGE' },
+  { id: 'fujairah',      name: 'Fujairah Anchorage',     short: 'FUJAIRAH',        lng: 56.40, lat: 25.20, type: 'port',      cargoValue: 'BUNKER / TRANSIT' },
+  { id: 'khasab',        name: 'Khasab Port',            short: 'KHASAB',          lng: 56.25, lat: 26.20, type: 'waypoint',  cargoValue: 'LOCAL TRAFFIC' },
+  { id: 'hormuz-west',   name: 'Hormuz West',            short: 'HORMUZ W',        lng: 56.00, lat: 26.60, type: 'waypoint',  cargoValue: 'OUTBOUND SPLIT' },
+  { id: 'hormuz-center', name: 'Hormuz Center',          short: 'HORMUZ CTR',      lng: 56.40, lat: 26.35, type: 'waypoint',  cargoValue: 'NARROW POINT' },
+  { id: 'hormuz-east',   name: 'Hormuz East',            short: 'HORMUZ E',        lng: 56.80, lat: 26.10, type: 'waypoint',  cargoValue: 'INBOUND MERGE' },
   { id: 'cape-town',     name: 'Cape Town',             short: 'CAPE TOWN',       lng: 18.50, lat: -34.0, type: 'waypoint',  cargoValue: 'DIVERT HUB' },
 ];
 
@@ -475,6 +509,35 @@ interface AmbientVessel {
   heading: number;
 }
 
+interface LiveVesselPosition {
+  id: string;
+  vesselName: string;
+  lat: number;
+  lon: number;
+  speedKnots?: number;
+  courseDeg?: number;
+  vesselType?: string;
+  mmsi?: string;
+  imoNumber?: string;
+  flagState?: string;
+  destination?: string;
+  timestamp?: string;
+}
+
+interface LiveVesselResponse {
+  vessels?: LiveVesselPosition[];
+}
+
+function getLiveVesselColor(vesselType?: string): [number, number, number, number] {
+  const type = vesselType?.toLowerCase() ?? '';
+  if (type.includes('tanker')) return [255, 120, 80, 220];
+  if (type.includes('cargo')) return [0, 190, 255, 215];
+  if (type.includes('container')) return [80, 180, 255, 220];
+  if (type.includes('passenger')) return [255, 220, 80, 210];
+  if (type.includes('fishing')) return [60, 210, 120, 210];
+  return [120, 230, 255, 210];
+}
+
 const AMBIENT_VESSELS: AmbientVessel[] = [
   // Red Sea
   { id: 'amb-001', lng: 42.0, lat: 14.0, type: 'tanker',    name: 'NORDIC LUNA',     flag: 'NO', cargo: 'Crude Oil 2.1Mt', heading: 340 },
@@ -503,6 +566,17 @@ const AMBIENT_VESSELS: AmbientVessel[] = [
   { id: 'amb-020', lng: 55.5, lat: 25.5, type: 'tanker',    name: 'ARABIAN FALCON',  flag: 'AE', cargo: 'Crude 1.2Mt',     heading: 130 },
   { id: 'amb-021', lng: 54.0, lat: 25.0, type: 'cargo',     name: 'DUBAI EXPRESS',   flag: 'AE', cargo: 'General Cargo',   heading: 145 },
   { id: 'amb-022', lng: 51.5, lat: 25.5, type: 'tanker',    name: 'GULF STAR',       flag: 'KW', cargo: 'Petroleum 220kt', heading: 160 },
+  { id: 'amb-036', lng: 55.35, lat: 26.55, type: 'tanker',    name: 'QATAR KING',        flag: 'PA', cargo: 'LNG / Outbound',      heading: 110 },
+  { id: 'amb-037', lng: 55.85, lat: 26.48, type: 'tanker',    name: 'HORMUZ SPIRIT',     flag: 'MH', cargo: 'Crude Oil 2.0Mt',    heading: 108 },
+  { id: 'amb-038', lng: 56.35, lat: 26.34, type: 'container', name: 'FUJAIRAH VECTOR',   flag: 'LR', cargo: '9,800 TEU',          heading: 105 },
+  { id: 'amb-039', lng: 56.72, lat: 26.08, type: 'cargo',     name: 'OMAN TRADER',       flag: 'SG', cargo: 'Mixed Cargo',        heading: 112 },
+  { id: 'amb-040', lng: 57.05, lat: 25.78, type: 'bulk',      name: 'GULF OF OMAN-3',    flag: 'IN', cargo: 'Dry Bulk 72kt',      heading: 118 },
+  { id: 'amb-041', lng: 56.95, lat: 25.88, type: 'container', name: 'STRAIT INBOUND-1',  flag: 'DK', cargo: 'Inbound Containers', heading: 285 },
+  { id: 'amb-042', lng: 56.55, lat: 26.00, type: 'cargo',     name: 'KHASAB COASTER',    flag: 'OM', cargo: 'Local Traffic',      heading: 280 },
+  { id: 'amb-043', lng: 56.10, lat: 26.08, type: 'tanker',    name: 'BANDAR ABBAS-7',    flag: 'IR', cargo: 'Refined Products',   heading: 275 },
+  { id: 'amb-044', lng: 55.65, lat: 26.15, type: 'tanker',    name: 'PERSIAN GULF EXIT', flag: 'SA', cargo: 'Crude 1.6Mt',       heading: 272 },
+  { id: 'amb-045', lng: 56.30, lat: 27.02, type: 'cargo',     name: 'BANDAR ANCHOR-2',   flag: 'IR', cargo: 'Port Queue / Local', heading: 180 },
+  { id: 'amb-046', lng: 56.42, lat: 25.24, type: 'tanker',    name: 'FUJAIRAH HOLD-4',   flag: 'AE', cargo: 'Bunker / Waiting',   heading: 0   },
   // Mediterranean
   { id: 'amb-023', lng: 28.0, lat: 33.5, type: 'container', name: 'ZIM ISTANBUL',    flag: 'IL', cargo: '8,500 TEU',       heading: 280 },
   { id: 'amb-024', lng: 22.0, lat: 35.0, type: 'cargo',     name: 'HELLAS SEA',      flag: 'GR', cargo: 'Mixed Cargo',     heading: 285 },
@@ -622,6 +696,9 @@ const SUPPLY_CHAIN_NODES: SupplyChainNode[] = [
   { id: 'djibouti-port', name: 'Djibouti Port',                 short: 'DJIB PORT',    type: 'PORT',    lng: 43.13, lat: 11.59, throughput: '78% MIL',      status: 'DEGRADED',    note: 'CJTF-HOA surge — 78% military traffic — commercial queuing' },
   { id: 'kuwait-port',   name: 'Al-Shuwaikh Port Kuwait',       short: 'KUWAIT PORT',  type: 'PORT',    lng: 47.94, lat: 29.35, throughput: 'ARCENT PREPO',  status: 'OPERATIONAL', note: 'NATO POMCUS pre-pos loading — ARCENT LOGCAP active' },
   { id: 'jebel-ali',     name: 'Dubai Jebel Ali',               short: 'JEBEL ALI',    type: 'PORT',    lng: 55.02, lat: 24.98, throughput: '22K TEU/day',   status: 'OPERATIONAL', note: "World's largest container port — absorbing Red Sea overflow cargo" },
+  { id: 'bandar-abbas-node', name: 'Bandar Abbas Anchorage',    short: 'BANDAR ABBAS', type: 'PORT',    lng: 56.30, lat: 27.10, throughput: '40 AIS hulls',   status: 'OPERATIONAL', note: 'Hormuz dataset anchor cluster — outbound Gulf traffic staging area' },
+  { id: 'fujairah-node',     name: 'Fujairah Anchorage',        short: 'FUJAIRAH ANC', type: 'PORT',    lng: 56.40, lat: 25.20, throughput: 'Inbound stack',  status: 'OPERATIONAL', note: 'Hormuz inbound receiving area — bunkering, queueing, and handoff traffic' },
+  { id: 'khasab-node',       name: 'Khasab Port',               short: 'KHASAB PORT',  type: 'PORT',    lng: 56.25, lat: 26.20, throughput: 'Local traffic',  status: 'OPERATIONAL', note: 'Oman-side local traffic reference point at the central Strait' },
   { id: 'cairo-apt',     name: 'Cairo International Airport',   short: "CAIRO INT'L",  type: 'AIRPORT', lng: 31.41, lat: 30.12, throughput: 'DEGRADED',      status: 'DEGRADED',    note: 'APT-41 SCADA risk — restricted to verified cargo operators only' },
   { id: 'baghdad-apt',   name: 'Baghdad BIAP',                  short: 'BIAP',         type: 'AIRPORT', lng: 44.23, lat: 33.26, throughput: '14 C-17/day',   status: 'OPERATIONAL', note: 'Coalition airlift hub — C-17/C-130 surge ops active' },
   { id: 'erbil-apt',     name: 'Erbil International Airport',   short: "ERBIL INT'L",  type: 'AIRPORT', lng: 44.01, lat: 36.23, throughput: '6 C-130/day',   status: 'OPERATIONAL', note: 'Kurdistan coalition hub — CJTF-OIR northern logistics terminus' },
@@ -820,33 +897,73 @@ function getTrackProvenance(
 
   if (track.type === 'hostile' || track.type === 'unknown') {
     for (const s of sigintItems) {
-      const refStr = `${s.associatedThreatId ?? ''} ${s.pk} ${s.frequency ?? ''} ${s.signalType ?? ''}`;
+      const refStr = `${s.associatedThreatId ?? ''} ${s.interceptId} ${s.frequencyMhz ?? ''} ${s.sourceType ?? ''}`;
       if ((matchesAny(refStr) || track.type === 'hostile') && hits.filter(h => h.objectType === 'SigintIntercept').length < 2) {
-        hits.push({ objectType: 'SigintIntercept', pk: s.pk, label: `${s.signalType ?? 'SIGINT'} ${s.frequency ? `@ ${s.frequency}` : ''}`, icon: '📡', color: '#a78bfa', detail: `${s.classification ?? 'CLASSIFIED'} · ${s.location ?? ''}`, url: foundryLink('SigintIntercept', s.pk) });
+        hits.push({
+          objectType: 'SigintIntercept',
+          pk: s.interceptId,
+          label: `${s.sourceType ?? 'SIGINT'} @ ${s.frequencyMhz ?? 0} MHz`,
+          icon: '📡',
+          color: '#a78bfa',
+          detail: `${s.classification ?? 'CLASSIFIED'} · ${s.lat.toFixed(2)}, ${s.lon.toFixed(2)}`,
+          url: foundryLink('SigintIntercept', s.interceptId),
+        });
       }
     }
     for (const h of humintItems) {
-      const refStr = `${h.relatedThreatId ?? ''} ${h.pk} ${h.sourceId ?? ''} ${h.summary ?? ''}`;
+      const refStr = `${h.relatedThreatId ?? ''} ${h.reportId} ${h.sourceReliability ?? ''} ${h.reportText ?? ''}`;
       if ((matchesAny(refStr) || hits.length < 2) && hits.filter(x => x.objectType === 'HumintReport').length < 1) {
-        hits.push({ objectType: 'HumintReport', pk: h.pk, label: h.sourceId ? `SRC: ${h.sourceId}` : h.pk, icon: '🕵️', color: '#fb923c', detail: h.summary?.slice(0, 60) ?? 'HUMINT REPORT', url: foundryLink('HumintReport', h.pk) });
+        hits.push({
+          objectType: 'HumintReport',
+          pk: h.reportId,
+          label: `SRC ${h.sourceReliability ?? '?'} / ${h.infoCredibility ?? '?'}`,
+          icon: '🕵️',
+          color: '#fb923c',
+          detail: h.reportText?.slice(0, 60) ?? 'HUMINT REPORT',
+          url: foundryLink('HumintReport', h.reportId),
+        });
       }
     }
     for (const ioc of iocItems) {
       if (hits.filter(x => x.objectType === 'CyberIoc').length < 2) {
-        hits.push({ objectType: 'CyberIoc', pk: ioc.pk, label: ioc.indicatorType ? `${ioc.indicatorType}: ${ioc.indicatorValue?.slice(0, 20) ?? ioc.pk}` : ioc.pk, icon: '🔴', color: '#f43f5e', detail: ioc.attribution ?? 'IOC INDICATOR', url: foundryLink('CyberIoc', ioc.pk) });
+        hits.push({
+          objectType: 'CyberIoc',
+          pk: ioc.iocId,
+          label: ioc.iocType ? `${ioc.iocType}: ${ioc.iocValue?.slice(0, 20) ?? ioc.iocId}` : ioc.iocId,
+          icon: '🔴',
+          color: '#f43f5e',
+          detail: ioc.ttpReference ?? 'IOC INDICATOR',
+          url: foundryLink('CyberIoc', ioc.iocId),
+        });
       }
     }
   }
   if (track.type === 'friendly' || track.type === 'neutral' || track.type === 'unknown') {
     for (const a of aisItems) {
-      const refStr = `${a.linkedVesselId ?? ''} ${a.pk} ${a.mmsi ?? ''} ${a.vesselName ?? ''}`;
+      const refStr = `${a.linkedVesselId ?? ''} ${a.aisId} ${a.mmsi ?? ''} ${a.vesselName ?? ''}`;
       if ((matchesAny(refStr) || hits.length < 2) && hits.filter(x => x.objectType === 'MaritimeAisTrack').length < 2) {
-        hits.push({ objectType: 'MaritimeAisTrack', pk: a.pk, label: a.vesselName ? `${a.vesselName} (MMSI:${a.mmsi ?? '?'})` : a.pk, icon: '📍', color: '#22d3ee', detail: a.navStatus ?? 'AIS TRACK', url: foundryLink('MaritimeAisTrack', a.pk) });
+        hits.push({
+          objectType: 'MaritimeAisTrack',
+          pk: a.aisId,
+          label: a.vesselName ? `${a.vesselName} (MMSI:${a.mmsi ?? '?'})` : a.aisId,
+          icon: '📍',
+          color: '#22d3ee',
+          detail: `${a.vesselType ?? 'AIS TRACK'} · ${a.speedKnots ?? 0} kts`,
+          url: foundryLink('MaritimeAisTrack', a.aisId),
+        });
       }
     }
     for (const isr of isrItems) {
-      if ((matchesAny(`${isr.targetVesselId ?? ''} ${isr.pk}`) || hits.length < 3) && hits.filter(x => x.objectType === 'IsrImagery').length < 1) {
-        hits.push({ objectType: 'IsrImagery', pk: isr.pk, label: `${isr.sensorType ?? 'ISR'} ${isr.resolution ? `@ ${isr.resolution}` : ''}`, icon: '🛰️', color: '#34d399', detail: isr.classification ?? 'ISR IMAGERY', url: foundryLink('IsrImagery', isr.pk) });
+      if ((matchesAny(`${isr.targetVesselId ?? ''} ${isr.imageId}`) || hits.length < 3) && hits.filter(x => x.objectType === 'IsrImagery').length < 1) {
+        hits.push({
+          objectType: 'IsrImagery',
+          pk: isr.imageId,
+          label: `${isr.sensorType ?? 'ISR'} @ ${isr.resolutionM ?? 0}m`,
+          icon: '🛰️',
+          color: '#34d399',
+          detail: isr.analystNotes?.slice(0, 60) ?? 'ISR IMAGERY',
+          url: foundryLink('IsrImagery', isr.imageId),
+        });
       }
     }
   }
@@ -863,19 +980,43 @@ function getThreatProvenance(
   const ip  = threat.ip?.toLowerCase() ?? '';
   const att = threat.attacker?.toLowerCase() ?? '';
   for (const ioc of iocItems) {
-    const refStr = `${ioc.indicatorValue ?? ''} ${ioc.attribution ?? ''} ${ioc.pk}`.toLowerCase();
+    const refStr = `${ioc.iocValue ?? ''} ${ioc.ttpReference ?? ''} ${ioc.iocId}`.toLowerCase();
     if ((refStr.includes(ip) || refStr.includes(att) || hits.length < 2) && hits.filter(h => h.objectType === 'CyberIoc').length < 3) {
-      hits.push({ objectType: 'CyberIoc', pk: ioc.pk, label: ioc.indicatorType ? `${ioc.indicatorType}: ${ioc.indicatorValue?.slice(0, 20) ?? ioc.pk}` : ioc.pk, icon: '🔴', color: '#f43f5e', detail: ioc.attribution ?? 'IOC INDICATOR', url: foundryLink('CyberIoc', ioc.pk) });
+      hits.push({
+        objectType: 'CyberIoc',
+        pk: ioc.iocId,
+        label: ioc.iocType ? `${ioc.iocType}: ${ioc.iocValue?.slice(0, 20) ?? ioc.iocId}` : ioc.iocId,
+        icon: '🔴',
+        color: '#f43f5e',
+        detail: ioc.ttpReference ?? 'IOC INDICATOR',
+        url: foundryLink('CyberIoc', ioc.iocId),
+      });
     }
   }
   for (const s of sigintItems) {
     if (hits.filter(h => h.objectType === 'SigintIntercept').length < 1) {
-      hits.push({ objectType: 'SigintIntercept', pk: s.pk, label: `${s.signalType ?? 'SIGINT'} ${s.frequency ? `@ ${s.frequency}` : ''}`, icon: '📡', color: '#a78bfa', detail: `${s.classification ?? 'CLASSIFIED'} · ${s.location ?? ''}`, url: foundryLink('SigintIntercept', s.pk) });
+      hits.push({
+        objectType: 'SigintIntercept',
+        pk: s.interceptId,
+        label: `${s.sourceType ?? 'SIGINT'} @ ${s.frequencyMhz ?? 0} MHz`,
+        icon: '📡',
+        color: '#a78bfa',
+        detail: `${s.classification ?? 'CLASSIFIED'} · ${s.lat.toFixed(2)}, ${s.lon.toFixed(2)}`,
+        url: foundryLink('SigintIntercept', s.interceptId),
+      });
     }
   }
   for (const h of humintItems) {
     if (hits.filter(x => x.objectType === 'HumintReport').length < 1) {
-      hits.push({ objectType: 'HumintReport', pk: h.pk, label: h.sourceId ? `SRC: ${h.sourceId}` : h.pk, icon: '🕵️', color: '#fb923c', detail: h.summary?.slice(0, 60) ?? 'HUMINT REPORT', url: foundryLink('HumintReport', h.pk) });
+      hits.push({
+        objectType: 'HumintReport',
+        pk: h.reportId,
+        label: `SRC ${h.sourceReliability ?? '?'} / ${h.infoCredibility ?? '?'}`,
+        icon: '🕵️',
+        color: '#fb923c',
+        detail: h.reportText?.slice(0, 60) ?? 'HUMINT REPORT',
+        url: foundryLink('HumintReport', h.reportId),
+      });
     }
   }
   return hits.slice(0, 5);
@@ -887,7 +1028,7 @@ function getThreatProvenance(
 
 function DeckGLMap() {
   const { demoState } = useDemo();
-  const { data: shodanResponse } = useListShodanThreats(undefined, { query: { enabled: true, refetchInterval: 30000 } });
+  const { data: shodanResponse } = useListShodanThreats(undefined, { query: { enabled: true, refetchInterval: 30000 } as any });
 
   const [viewState, setViewState] = useState<Record<string, unknown>>(INITIAL_VIEW_STATE);
   const prevSceneRef  = useRef(0);
@@ -908,6 +1049,8 @@ function DeckGLMap() {
   const [hoveredMilVessel,  setHoveredMilVessel]  = useState<MilitaryVessel | null>(null);
   const [hoveredConvoy,     setHoveredConvoy]     = useState<GroundConvoy | null>(null);
   const [hoveredSupplyNode, setHoveredSupplyNode] = useState<SupplyChainNode | null>(null);
+  const [liveVessels, setLiveVessels] = useState<LiveVesselPosition[]>([]);
+  const [hoveredLiveVessel, setHoveredLiveVessel] = useState<LiveVesselPosition | null>(null);
 
   const flyTo = useCallback((lat: number, lng: number, zoom: number, pitch: number, bearing: number) => {
     setViewState({
@@ -937,6 +1080,34 @@ function DeckGLMap() {
     return () => cancelAnimationFrame(id);
   }, [demoState.running, demoState.complete]);
 
+  useEffect(() => {
+    let cancelled = false;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+    const loadLiveVessels = async () => {
+      try {
+        const response = await fetch('/api/vessels', { headers: { Accept: 'application/json' } });
+        if (!response.ok) return;
+        const payload = await response.json() as LiveVesselResponse;
+        if (!cancelled) {
+          setLiveVessels(Array.isArray(payload.vessels) ? payload.vessels : []);
+        }
+      } catch {
+        if (!cancelled) setLiveVessels([]);
+      }
+    };
+
+    void loadLiveVessels();
+    pollTimer = setInterval(() => {
+      void loadLiveVessels();
+    }, 15_000);
+
+    return () => {
+      cancelled = true;
+      if (pollTimer) clearInterval(pollTimer);
+    };
+  }, []);
+
   const demoTracks  = demoState.trackUpdates;
   const demoThreats = demoState.cyberThreats;
   const staticThreats = (!demoState.running && !demoState.complete) ? (shodanResponse?.results ?? []) : [];
@@ -956,12 +1127,10 @@ function DeckGLMap() {
         data: SHIPPING_LANES,
         pickable: false,
         widthMinPixels: 1, widthMaxPixels: 5,
-        getPath: d => d.path,
+        getPath: (d: ShippingLane) => d.path as [number, number][],
         getColor: d => d.color,
         getWidth: d => d.width,
-        getDashArray: d => d.isDashed ? [8, 6] : [0, 0],
-        dashJustified: true,
-        parameters: { depthTest: false },
+        parameters: NO_DEPTH_TEST,
       })
     );
 
@@ -980,7 +1149,7 @@ function DeckGLMap() {
           widthMinPixels: 1,
           widthMaxPixels: 6,
           greatCircle: true,
-          parameters: { depthTest: false },
+          parameters: NO_DEPTH_TEST,
         })
       );
     }
@@ -1006,7 +1175,7 @@ function DeckGLMap() {
           getFillColor: (d: any) => [d.color[0], d.color[1], d.color[2], Math.floor(d.opacity * 0.18)],
           getLineColor: (d: any) => [d.color[0], d.color[1], d.color[2], d.opacity],
           getLineWidth: 800,
-          parameters: { depthTest: false },
+          parameters: NO_DEPTH_TEST,
           updateTriggers: { getFillColor: [pulsePhase], getLineColor: [pulsePhase] },
         })
       );
@@ -1029,6 +1198,7 @@ function DeckGLMap() {
             setHoveredAmbient(info.object as AmbientVessel);
             setHoveredChokepoint(null); setHoveredBase(null);
             setHoveredAircraft(null); setHoveredMilVessel(null); setHoveredConvoy(null); setHoveredSupplyNode(null);
+            setHoveredLiveVessel(null);
             setHoverPos({ x: info.x, y: info.y });
           } else if (hoveredAmbient) {
             setHoveredAmbient(null);
@@ -1037,6 +1207,40 @@ function DeckGLMap() {
         },
       })
     );
+
+    if (liveVessels.length > 0) {
+      allLayers.push(
+        new ScatterplotLayer<LiveVesselPosition>({
+          id: 'live-vessel-positions',
+          data: liveVessels,
+          pickable: true,
+          opacity: 0.95,
+          stroked: true,
+          filled: true,
+          radiusMinPixels: 3,
+          radiusMaxPixels: 12,
+          lineWidthMinPixels: 1,
+          getPosition: d => [d.lon, d.lat],
+          getRadius: d => d.speedKnots && d.speedKnots > 12 ? 950 : 700,
+          getFillColor: d => getLiveVesselColor(d.vesselType),
+          getLineColor: [255, 255, 255, 190],
+          getLineWidth: 220,
+          onHover: info => {
+            if (info.object) {
+              setHoveredLiveVessel(info.object as LiveVesselPosition);
+              setHoveredAmbient(null); setHoveredChokepoint(null); setHoveredBase(null);
+              setHoveredAircraft(null); setHoveredMilVessel(null); setHoveredConvoy(null); setHoveredSupplyNode(null);
+              setHoverInfo(null);
+              setHoverPos({ x: info.x, y: info.y });
+            } else if (hoveredLiveVessel) {
+              setHoveredLiveVessel(null);
+              setHoverPos(null);
+            }
+          },
+          parameters: NO_DEPTH_TEST,
+        })
+      );
+    }
 
     // ── 5. Chokepoints (always visible) ──
     allLayers.push(
@@ -1056,6 +1260,7 @@ function DeckGLMap() {
             setHoveredChokepoint(info.object as Chokepoint);
             setHoveredAmbient(null); setHoveredBase(null);
             setHoveredAircraft(null); setHoveredMilVessel(null); setHoveredConvoy(null); setHoveredSupplyNode(null);
+            setHoveredLiveVessel(null);
             setHoverPos({ x: info.x, y: info.y });
           } else if (hoveredChokepoint) {
             setHoveredChokepoint(null);
@@ -1080,7 +1285,7 @@ function DeckGLMap() {
         getTextAnchor: 'middle',
         getAlignmentBaseline: 'bottom',
         billboard: true,
-        parameters: { depthTest: false },
+          parameters: NO_DEPTH_TEST,
       })
     );
 
@@ -1099,7 +1304,7 @@ function DeckGLMap() {
         getTextAnchor: 'middle',
         getAlignmentBaseline: 'center',
         billboard: true,
-        parameters: { depthTest: false },
+        parameters: NO_DEPTH_TEST,
       })
     );
 
@@ -1116,7 +1321,7 @@ function DeckGLMap() {
         getFillColor: d => { const c = BASE_NATION_COLORS[d.nation] ?? [200,200,200,200]; return [c[0], c[1], c[2], 18]; },
         getLineColor: d => { const c = BASE_NATION_COLORS[d.nation] ?? [200,200,200,200]; return [c[0], c[1], c[2], 80]; },
         getLineWidth: 300,
-        parameters: { depthTest: false },
+        parameters: NO_DEPTH_TEST,
       })
     );
 
@@ -1138,13 +1343,14 @@ function DeckGLMap() {
             setHoveredBase(info.object as MilitaryBase);
             setHoveredAmbient(null); setHoveredChokepoint(null);
             setHoveredAircraft(null); setHoveredMilVessel(null); setHoveredConvoy(null); setHoveredSupplyNode(null);
+            setHoveredLiveVessel(null);
             setHoverPos({ x: info.x, y: info.y });
           } else if (hoveredBase) {
             setHoveredBase(null);
             setHoverPos(null);
           }
         },
-        parameters: { depthTest: false },
+        parameters: NO_DEPTH_TEST,
       })
     );
 
@@ -1163,7 +1369,7 @@ function DeckGLMap() {
         getTextAnchor: 'middle',
         getAlignmentBaseline: 'bottom',
         billboard: true,
-        parameters: { depthTest: false },
+        parameters: NO_DEPTH_TEST,
       })
     );
 
@@ -1181,6 +1387,7 @@ function DeckGLMap() {
         onHover: info => {
           setHoveredAmbient(null); setHoveredChokepoint(null); setHoveredBase(null);
           setHoveredAircraft(null); setHoveredMilVessel(null); setHoveredConvoy(null); setHoveredSupplyNode(null);
+          setHoveredLiveVessel(null);
           setHoverPos(null);
           setHoverInfo(info.object ? { ...info, object: info.object as DemoTrackUpdate, layerId: 'track' } : null);
         },
@@ -1202,6 +1409,7 @@ function DeckGLMap() {
         onHover: info => {
           setHoveredAmbient(null); setHoveredChokepoint(null); setHoveredBase(null);
           setHoveredAircraft(null); setHoveredMilVessel(null); setHoveredConvoy(null); setHoveredSupplyNode(null);
+          setHoveredLiveVessel(null);
           setHoverPos(null);
           setHoverInfo(info.object ? { ...info, object: info.object as DemoCyberThreat, layerId: 'threat' } : null);
         },
@@ -1237,9 +1445,7 @@ function DeckGLMap() {
         getPath: (d: AirCorridor) => d.path,
         getColor: (d: AirCorridor) => d.color,
         getWidth: 1.5,
-        getDashArray: [5, 5],
-        dashJustified: true,
-        parameters: { depthTest: false },
+        parameters: NO_DEPTH_TEST,
       })
     );
 
@@ -1253,9 +1459,7 @@ function DeckGLMap() {
         getPath: (d: LogisticsRoute) => d.path,
         getColor: (d: LogisticsRoute) => d.status === 'HALTED' ? [255,80,0,d.color[3]] as [number,number,number,number] : d.status === 'DIVERTED' ? [255,140,0,d.color[3]] as [number,number,number,number] : d.status === 'DEGRADED' ? [200,140,0,d.color[3]] as [number,number,number,number] : d.color,
         getWidth: (d: LogisticsRoute) => d.width,
-        getDashArray: (d: LogisticsRoute) => d.type === 'RAIL' ? [4, 3] : [1, 0],
-        dashJustified: true,
-        parameters: { depthTest: false },
+        parameters: NO_DEPTH_TEST,
       })
     );
 
@@ -1276,10 +1480,11 @@ function DeckGLMap() {
             setHoveredSupplyNode(info.object as SupplyChainNode);
             setHoveredAmbient(null); setHoveredChokepoint(null); setHoveredBase(null);
             setHoveredAircraft(null); setHoveredMilVessel(null); setHoveredConvoy(null);
+            setHoveredLiveVessel(null);
             setHoverPos({ x: info.x, y: info.y });
           } else if (hoveredSupplyNode) { setHoveredSupplyNode(null); setHoverPos(null); }
         },
-        parameters: { depthTest: false },
+        parameters: NO_DEPTH_TEST,
       })
     );
     allLayers.push(
@@ -1292,7 +1497,7 @@ function DeckGLMap() {
         getColor: (d: SupplyChainNode) => d.status === 'OPERATIONAL' ? [0,200,100,180] : d.status === 'DEGRADED' ? [255,180,0,180] : d.status === 'DISRUPTED' ? [255,100,100,200] : [220,60,60,220],
         getSize: 8, fontFamily: 'monospace', fontWeight: 'bold',
         getTextAnchor: 'middle', getAlignmentBaseline: 'bottom',
-        billboard: true, parameters: { depthTest: false },
+        billboard: true, parameters: NO_DEPTH_TEST,
       })
     );
 
@@ -1313,10 +1518,11 @@ function DeckGLMap() {
             setHoveredMilVessel(info.object as typeof milVesselsAnimated[number]);
             setHoveredAmbient(null); setHoveredChokepoint(null); setHoveredBase(null);
             setHoveredAircraft(null); setHoveredConvoy(null); setHoveredSupplyNode(null);
+            setHoveredLiveVessel(null);
             setHoverPos({ x: info.x, y: info.y });
           } else if (hoveredMilVessel) { setHoveredMilVessel(null); setHoverPos(null); }
         },
-        parameters: { depthTest: false },
+        parameters: NO_DEPTH_TEST,
         updateTriggers: { getPosition: [pulsePhase] },
       })
     );
@@ -1330,7 +1536,7 @@ function DeckGLMap() {
         getColor: d => d.nationality === 'US' ? [30,144,255,200] : d.nationality === 'UK' ? [200,30,70,200] : d.nationality === 'FR' ? [60,120,220,200] : d.nationality === 'AU' ? [0,120,200,200] : [255,140,0,220],
         getSize: 8, fontFamily: 'monospace', fontWeight: 'bold',
         getTextAnchor: 'middle', getAlignmentBaseline: 'bottom',
-        billboard: true, parameters: { depthTest: false },
+        billboard: true, parameters: NO_DEPTH_TEST,
         updateTriggers: { getPosition: [pulsePhase] },
       })
     );
@@ -1352,10 +1558,11 @@ function DeckGLMap() {
             setHoveredConvoy(info.object as typeof convoysAnimated[number]);
             setHoveredAmbient(null); setHoveredChokepoint(null); setHoveredBase(null);
             setHoveredAircraft(null); setHoveredMilVessel(null); setHoveredSupplyNode(null);
+            setHoveredLiveVessel(null);
             setHoverPos({ x: info.x, y: info.y });
           } else if (hoveredConvoy) { setHoveredConvoy(null); setHoverPos(null); }
         },
-        parameters: { depthTest: false },
+        parameters: NO_DEPTH_TEST,
         updateTriggers: { getPosition: [pulsePhase] },
       })
     );
@@ -1369,7 +1576,7 @@ function DeckGLMap() {
         getColor: d => d.status === 'MOVING' ? [0,200,100,180] : d.status === 'DELAYED' ? [255,180,0,180] : [255,100,0,200],
         getSize: 8, fontFamily: 'monospace', fontWeight: 'bold',
         getTextAnchor: 'middle', getAlignmentBaseline: 'bottom',
-        billboard: true, parameters: { depthTest: false },
+        billboard: true, parameters: NO_DEPTH_TEST,
         updateTriggers: { getPosition: [pulsePhase] },
       })
     );
@@ -1398,10 +1605,11 @@ function DeckGLMap() {
             setHoveredAircraft(info.object as typeof aircraftAnimated[number]);
             setHoveredAmbient(null); setHoveredChokepoint(null); setHoveredBase(null);
             setHoveredMilVessel(null); setHoveredConvoy(null); setHoveredSupplyNode(null);
+            setHoveredLiveVessel(null);
             setHoverPos({ x: info.x, y: info.y });
           } else if (hoveredAircraft) { setHoveredAircraft(null); setHoverPos(null); }
         },
-        parameters: { depthTest: false },
+        parameters: NO_DEPTH_TEST,
         updateTriggers: { getPosition: [pulsePhase] },
       })
     );
@@ -1421,13 +1629,13 @@ function DeckGLMap() {
         },
         getSize: 8, fontFamily: 'monospace', fontWeight: 'bold',
         getTextAnchor: 'middle', getAlignmentBaseline: 'bottom',
-        billboard: true, parameters: { depthTest: false },
+        billboard: true, parameters: NO_DEPTH_TEST,
         updateTriggers: { getPosition: [pulsePhase] },
       })
     );
 
     return allLayers;
-  }, [demoTracks, cyberPoints, scImpact, pulsePhase, hoveredAmbient, hoveredChokepoint, hoveredBase, hoveredAircraft, hoveredMilVessel, hoveredConvoy, hoveredSupplyNode]);
+  }, [demoTracks, cyberPoints, liveVessels, scImpact, pulsePhase, hoveredAmbient, hoveredChokepoint, hoveredBase, hoveredAircraft, hoveredMilVessel, hoveredConvoy, hoveredSupplyNode, hoveredLiveVessel]);
 
   const demoRunning = demoState.running;
   const sceneLabel  = demoState.sceneLabel;
@@ -1603,6 +1811,7 @@ function DeckGLMap() {
           <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-[#ffb400]" /><span className="text-[7px] text-[#888]">UNKNOWN TRACK</span></div>
           <div className="text-[6px] text-[#333] tracking-widest uppercase mb-0.5 mt-1">── MARITIME ──</div>
           <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-[#22c5e0] opacity-70" /><span className="text-[7px] text-[#888]">COMMERCIAL VESSEL</span></div>
+          <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-[#00beff] border border-white/60" /><span className="text-[7px] text-[#888]">LIVE AIS VESSEL</span></div>
           <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full border border-[#ffc800]" /><span className="text-[7px] text-[#888]">CHOKEPOINT / PORT</span></div>
           <div className="flex items-center gap-1.5"><div className="w-3 h-0.5 bg-[#0090ff] opacity-50" /><span className="text-[7px] text-[#888]">SLOC / SHIPPING LANE</span></div>
           <div className="text-[6px] text-[#333] tracking-widest uppercase mb-0.5 mt-1">── BASES ──</div>
@@ -1718,8 +1927,41 @@ function DeckGLMap() {
         </div>
       )}
 
+      {/* ── HOVER TOOLTIP — live AIS vessels ── */}
+      {hoveredLiveVessel && hoverPos && !hoveredAmbient && (
+        <div
+          className="absolute z-50 pointer-events-none"
+          style={{
+            left: hoverPos.x + 15, top: hoverPos.y + 15,
+            background: 'rgba(3,6,4,0.97)', border: '1px solid rgba(0,190,255,0.35)',
+            fontFamily: 'monospace', minWidth: 240, maxWidth: 300,
+            boxShadow: '0 0 22px rgba(0,190,255,0.12)',
+          }}
+        >
+          <div className="px-3 pt-2 pb-1.5 border-b border-[#00beff20]">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#00beff', boxShadow: '0 0 5px #00beff' }} />
+              <span className="text-white font-bold text-[11px]">{hoveredLiveVessel.vesselName || hoveredLiveVessel.id}</span>
+              <span className="text-[#444] text-[8px] ml-auto">LIVE AIS</span>
+            </div>
+          </div>
+          <div className="px-3 py-1.5 grid grid-cols-2 gap-x-4 gap-y-0.5 text-[10px] border-b border-[#ffffff08]">
+            <span className="text-[#555]">TYPE:</span><span className="truncate text-[#00beff]">{hoveredLiveVessel.vesselType ?? 'UNKNOWN'}</span>
+            <span className="text-[#555]">SOG:</span><span>{hoveredLiveVessel.speedKnots != null ? `${hoveredLiveVessel.speedKnots.toFixed(1)} KTS` : 'N/A'}</span>
+            <span className="text-[#555]">COG:</span><span>{hoveredLiveVessel.courseDeg != null ? `${hoveredLiveVessel.courseDeg.toFixed(0)}°` : 'N/A'}</span>
+            <span className="text-[#555]">MMSI:</span><span>{hoveredLiveVessel.mmsi ?? 'N/A'}</span>
+            <span className="text-[#555]">DEST:</span><span className="truncate text-[#ffb400]">{hoveredLiveVessel.destination ?? 'UNKNOWN'}</span>
+            <span className="text-[#555]">IMO:</span><span>{hoveredLiveVessel.imoNumber ?? 'N/A'}</span>
+          </div>
+          <div className="px-3 py-1 text-[#555] text-[9px] leading-relaxed border-b border-[#ffffff08]">
+            {hoveredLiveVessel.lat.toFixed(4)}°, {hoveredLiveVessel.lon.toFixed(4)}° · {hoveredLiveVessel.flagState ?? 'FLAG N/A'}
+          </div>
+          <div className="px-3 pb-1.5 text-[8px] text-[#444]">FOUNDRY LIVE AIS SNAPSHOT</div>
+        </div>
+      )}
+
       {/* ── HOVER TOOLTIP — military bases ── */}
-      {hoveredBase && hoverPos && !hoveredAmbient && !hoveredChokepoint && (
+      {hoveredBase && hoverPos && !hoveredAmbient && !hoveredLiveVessel && !hoveredChokepoint && (
         <div
           className="absolute z-50 pointer-events-none"
           style={{

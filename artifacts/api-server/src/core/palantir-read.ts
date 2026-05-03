@@ -22,7 +22,7 @@ import { logger } from "../lib/logger";
 //   attributedToThreat / cyberIocs
 // ---------------------------------------------------------------------------
 
-export const ONTOLOGY_RID = process.env["PALANTIR_ONTOLOGY_RID"] ?? "runtime-configured";
+export const ONTOLOGY_RID = process.env["PALANTIR_ONTOLOGY_RID"] ?? process.env["ONTOLOGY_RID"] ?? "runtime-configured";
 
 // OSDK v2 object type API names — exact camelCase as returned by Foundry
 export const OT = {
@@ -68,10 +68,10 @@ export const LINKS = {
 let cachedToken: { value: string; expiresAt: number } | null = null;
 
 async function getToken(): Promise<{ url: string; token: string } | null> {
-  const url          = process.env["PALANTIR_URL"];
-  const clientId     = process.env["PALANTIR_CLIENT_ID"];
-  const clientSecret = process.env["PALANTIR_CLIENT_SECRET"];
-  const directToken  = process.env["PALANTIR_TOKEN"];
+  const url          = process.env["PALANTIR_URL"] ?? process.env["FOUNDRY_URL"];
+  const clientId     = process.env["PALANTIR_CLIENT_ID"] ?? process.env["CLIENT_ID"];
+  const clientSecret = process.env["PALANTIR_CLIENT_SECRET"] ?? process.env["CLIENT_SECRET"];
+  const directToken  = process.env["PALANTIR_TOKEN"] ?? process.env["FOUNDRY_TOKEN"];
   if (!url) return null;
 
   if (clientId && clientSecret) {

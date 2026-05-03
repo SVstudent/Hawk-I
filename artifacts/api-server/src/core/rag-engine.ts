@@ -1,6 +1,7 @@
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { getSerializedContext } from "./battlespace-cache";
 import { getCachedOntologyGraph, serializeOntologyForRag, ONTOLOGY_RID } from "./palantir-read";
+import { fetchAISPositions, fetchLogisticsVessels } from "./foundry-live";
 import { logger } from "../lib/logger";
 
 // ---------------------------------------------------------------------------
@@ -114,10 +115,10 @@ class ProvenanceTracker {
 let _memToken: { value: string; expiresAt: number } | null = null;
 
 async function getFoundryAuth(): Promise<{ url: string; token: string } | null> {
-  const url          = process.env["PALANTIR_URL"];
-  const clientId     = process.env["PALANTIR_CLIENT_ID"];
-  const clientSecret = process.env["PALANTIR_CLIENT_SECRET"];
-  const directToken  = process.env["PALANTIR_TOKEN"];
+  const url          = process.env["PALANTIR_URL"] ?? process.env["FOUNDRY_URL"];
+  const clientId     = process.env["PALANTIR_CLIENT_ID"] ?? process.env["CLIENT_ID"];
+  const clientSecret = process.env["PALANTIR_CLIENT_SECRET"] ?? process.env["CLIENT_SECRET"];
+  const directToken  = process.env["PALANTIR_TOKEN"] ?? process.env["FOUNDRY_TOKEN"];
   if (!url) return null;
   if (clientId && clientSecret) {
     const now = Date.now();
@@ -280,6 +281,9 @@ RESPONSE RULES — MANDATORY:
 - Cite Foundry PKs inline where relevant (for example: THR-001, VSL-002, SIG-007).
 - Do not restate the user's question. Do not use filler, apologies, or vague hedging.
 - If information is uncertain or unavailable, say exactly what is missing and what to verify next.
+- In this application, Foundry object updates for \`LogisticsVessel\` and \`MaritimeAisTrack\` may be executed by the server action layer when the user gives a clear asset and destination coordinates.
+- Do not claim you lack access to Foundry actions in this session. If the user is trying to move an in-app vessel object, ask only for the missing asset identifier or coordinates.
+- Clearly distinguish between an **in-app Foundry object update** and **real-world ship/autopilot control**. You can discuss the latter, but do not confuse it with the former.
 
 ABBREVS: VSL=LogisticsVessel | THR=HostileThreat | UNIT=CombatUnit | INC=KineticIncident
 LEAD=TacticalLead | SIG=SigintIntercept | ISR=IsrImagery | HUM=HumintReport | AIS=AisTrack | IOC=CyberIoc
@@ -348,6 +352,8 @@ async function buildContext(userId = "commander-default"): Promise<{
   memoryCount:  number;
   memoriesUsed: boolean;
   memories:     FoundryMemory[];
+  liveAis:      Awaited<ReturnType<typeof fetchAISPositions>>;
+  liveLogistics:Awaited<ReturnType<typeof fetchLogisticsVessels>>;
   ontologyNodes:number;
   ontologyEdges:number;
   fromPalantir: boolean;
@@ -385,6 +391,45 @@ async function buildContext(userId = "commander-default"): Promise<{
     logger.warn({ err }, "Ontology context fetch failed — proceeding without Palantir graph");
   }
 
+  // 4. Live vessel snapshot for map/chat parity
+  let liveAis = [] as Awaited<ReturnType<typeof fetchAISPositions>>;
+  let liveLogistics = [] as Awaited<ReturnType<typeof fetchLogisticsVessels>>;
+  try {
+    [liveAis, liveLogistics] = await Promise.all([
+      fetchAISPositions(),
+      fetchLogisticsVessels(),
+    ]);
+  } catch (err) {
+    logger.warn({ err }, "Live vessel snapshot fetch failed — proceeding without vessel snapshot");
+  }
+
+  const vesselBlockParts: string[] = [];
+  if (liveAis.length > 0) {
+    vesselBlockParts.push(
+      `=== LIVE AIS SNAPSHOT (${Math.min(liveAis.length, 10)} of ${liveAis.length}) ===`,
+      ...liveAis
+        .slice()
+        .sort((a, b) => (b.speedKnots ?? 0) - (a.speedKnots ?? 0))
+        .slice(0, 10)
+        .map((v) =>
+          `${v.id}: ${v.vesselName} | ${v.vesselType ?? "Unknown"} | Pos:${v.lat.toFixed(3)},${v.lon.toFixed(3)} | ` +
+          `SOG:${(v.speedKnots ?? 0).toFixed(1)}kts | COG:${(v.courseDeg ?? 0).toFixed(0)}° | Dest:${v.destination ?? "N/A"}`
+        ),
+    );
+  }
+  if (liveLogistics.length > 0) {
+    vesselBlockParts.push(
+      "",
+      `=== LIVE LOGISTICS VESSELS (${Math.min(liveLogistics.length, 6)} of ${liveLogistics.length}) ===`,
+      ...liveLogistics
+        .slice(0, 6)
+        .map((v) =>
+          `${v.id}: ${v.vesselName} | Pos:${v.lat.toFixed(3)},${v.lon.toFixed(3)} | Dest:${v.destination ?? "N/A"}`
+        ),
+    );
+  }
+  const vesselBlock = vesselBlockParts.join("\n");
+
   // Build memory context block
   const memoryBlock = memories.length > 0
     ? `=== LONG-TERM MEMORY (${memories.length} entries from Palantir ExampleRv17memory) ===\n` +
@@ -396,12 +441,13 @@ async function buildContext(userId = "commander-default"): Promise<{
 
   const sections = [battlespaceContext];
   if (ontologyText) sections.push("", ontologyText);
+  if (vesselBlock)  sections.push("", vesselBlock);
   if (memoryBlock)  sections.push("", memoryBlock);
 
   return {
     text: sections.join("\n"),
     ontologyUsed, memoryCount, memoriesUsed,
-    memories, ontologyNodes, ontologyEdges, fromPalantir,
+    memories, liveAis, liveLogistics, ontologyNodes, ontologyEdges, fromPalantir,
   };
 }
 
@@ -420,7 +466,7 @@ export async function queryBattlespace(
   // 2. Build full context (memories + battlespace + ontology)
   const {
     text: context, ontologyUsed, memoryCount, memoriesUsed,
-    memories, ontologyNodes, ontologyEdges, fromPalantir,
+    memories, liveAis, liveLogistics, ontologyNodes, ontologyEdges, fromPalantir,
   } = await buildContext(userId);
 
   // 2b. Build provenance tracker — record every source consulted
@@ -435,10 +481,18 @@ export async function queryBattlespace(
   if (ontologyUsed) {
     for (const t of ontologyTypes) tracker.trackDataset(t);
   }
+  for (const vessel of liveAis.slice(0, 10)) {
+    if (vessel.id) tracker.trackObject("MaritimeAisTrack", vessel.id, vessel.vesselName);
+  }
+  for (const vessel of liveLogistics.slice(0, 6)) {
+    if (vessel.id) tracker.trackObject("LogisticsVessel", vessel.id, vessel.vesselName);
+  }
 
   const datasetsQueried = [
     "ExampleRv17memory",
     ...(ontologyUsed ? ontologyTypes : []),
+    ...(liveAis.length > 0 ? ["LiveAisSnapshot"] : []),
+    ...(liveLogistics.length > 0 ? ["LiveLogisticsSnapshot"] : []),
     "BattlespaceCache",
   ];
 

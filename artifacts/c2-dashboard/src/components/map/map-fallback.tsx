@@ -44,10 +44,10 @@ const LANDMARKS = [
 
 export function MapFallback() {
   const { data: tracks = [] } = useListTracks({
-    query: { enabled: true, refetchInterval: 8000 },
+    query: { enabled: true, refetchInterval: 8000 } as any,
   });
   const { data: shodanResponse } = useListShodanThreats(undefined, {
-    query: { enabled: true, refetchInterval: 15000 },
+    query: { enabled: true, refetchInterval: 15000 } as any,
   });
   const threats = (shodanResponse?.results || []).filter(t => t.lat != null && t.lng != null);
 

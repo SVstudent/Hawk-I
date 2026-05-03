@@ -5,6 +5,7 @@ import type {
   DemoCoaItem, DemoEvidenceLink, DemoOntologyEdge,
   DemoFoundryProvenance, DemoProvenanceDataset, DemoProvenanceLink,
 } from '@/demo/demo-scenes';
+import { DEMO_SCENES, TOTAL_DEMO_MS } from '@/demo/demo-scenes';
 
 // ---------------------------------------------------------------------------
 // Layout: 44% COA | 56% Ontology  (HAWK-I chat is a floating overlay)
@@ -65,6 +66,297 @@ const DS_ICON: Record<string, string> = {
 };
 const dsIcon = (ds: string) => DS_ICON[ds] ?? '📂';
 
+type InsightKind = 'impact' | 'change' | 'prevention';
+
+interface GeneratedInsight {
+  id: string;
+  kind: InsightKind;
+  label: string;
+  headline: string;
+  detail: string;
+  accent: string;
+}
+
+const INSIGHT_META: Record<InsightKind, { label: string; icon: string }> = {
+  impact:     { label: 'IMPACT',     icon: '▲' },
+  change:     { label: 'CHANGE',     icon: '◌' },
+  prevention: { label: 'PREVENTION', icon: '■' },
+};
+
+function getSceneById(sceneId: number) {
+  return DEMO_SCENES.find(scene => scene.id === sceneId) ?? null;
+}
+
+function getSceneDurationMs(sceneId: number) {
+  const currentIndex = DEMO_SCENES.findIndex(scene => scene.id === sceneId);
+  if (currentIndex < 0) return 20000;
+  const current = DEMO_SCENES[currentIndex]!;
+  const next = DEMO_SCENES[currentIndex + 1];
+  return (next?.startMs ?? TOTAL_DEMO_MS) - current.startMs;
+}
+
+function buildSupplyChainInsights(
+  currentSceneId: number,
+  currentLabel: string,
+): GeneratedInsight[] {
+  switch (currentSceneId) {
+    case 1:
+      return [
+        {
+          id: 'scene-1-impact',
+          kind: 'impact',
+          label: 'Queue Impact',
+          headline: 'Suez congestion is already compressing downstream resupply windows.',
+          detail: '47 northbound vessels are delayed, including VSL-004 and VSL-008, which narrows UNIT-DELTA and UNIT-CHARLIE replenishment slack before any direct attack occurs.',
+          accent: '#ffb800',
+        },
+        {
+          id: 'scene-1-change',
+          kind: 'change',
+          label: 'Baseline Shift',
+          headline: 'The supply network has moved from normal throughput to constrained flow.',
+          detail: 'MARSEC Level 3 and the Port Said queue indicate that the theater is no longer dealing with isolated incidents; routing friction is now a live operational condition.',
+          accent: '#22d3ee',
+        },
+        {
+          id: 'scene-1-prevention',
+          kind: 'prevention',
+          label: 'Prevention Move',
+          headline: 'Pre-stage alternate lift and reroute triggers before the queue hardens further.',
+          detail: 'Use this early warning window to lock escort availability, pre-authorize air bridge capacity, and publish branch-route criteria before vessels hit a no-options choke point.',
+          accent: '#00ff88',
+        },
+      ];
+    case 2:
+    case 3:
+      return [
+        {
+          id: `scene-${currentSceneId}-impact`,
+          kind: 'impact',
+          label: 'Convoy Impact',
+          headline: 'CONVOY-BRAVO is now a direct threat-to-sustainment problem, not only a force-protection problem.',
+          detail: 'A UAV swarm and confirmed ASBM chain against VSL-002 put petroleum and military stores for UNIT-FOXTROT at immediate risk of disruption or loss in transit.',
+          accent: '#ff1e3c',
+        },
+        {
+          id: `scene-${currentSceneId}-change`,
+          kind: 'change',
+          label: 'Threat Escalation',
+          headline: 'The risk has escalated from threat indication to active kill-chain execution.',
+          detail: currentSceneId === 2
+            ? 'SIGINT plus AIS confirms the convoy is inside the attack corridor, meaning routing assumptions are no longer valid.'
+            : 'ISR, HUMINT, and SIGINT now validate launch-to-target linkage, shrinking decision time and increasing the cost of delay.'
+          ,
+          accent: '#f97316',
+        },
+        {
+          id: `scene-${currentSceneId}-prevention`,
+          kind: 'prevention',
+          label: 'Prevention Move',
+          headline: 'Break the kill chain before it repeats on the next logistics movement.',
+          detail: 'Shift escorted transit windows, harden air-cover and intercept posture around Bab-el-Mandeb, and require pre-cleared alternate delivery paths for critical cargo classes before the next convoy departs.',
+          accent: '#00ff88',
+        },
+      ];
+    case 4:
+    case 5:
+      return [
+        {
+          id: `scene-${currentSceneId}-impact`,
+          kind: 'impact',
+          label: 'Infrastructure Impact',
+          headline: 'Cyber compromise at Suez is converting port infrastructure into a supply-chain denial mechanism.',
+          detail: currentSceneId === 4
+            ? 'APT-41 access to Port Said SCADA threatens lock operations and can strand 47 queued vessels, including allied logistics ships carrying fuel and military stores.'
+            : 'The Ismailia DNP3 intrusion expands the blast radius from canal locks to power support systems, raising the chance of prolonged transit paralysis for VSL-008 and adjacent shipping lanes.'
+          ,
+          accent: '#ff6400',
+        },
+        {
+          id: `scene-${currentSceneId}-change`,
+          kind: 'change',
+          label: 'Network Change',
+          headline: 'This is no longer a single chokepoint issue; it is now a layered logistics systems attack.',
+          detail: currentSceneId === 4
+            ? 'The campaign has shifted from maritime threat pressure to a canal-control vulnerability that can freeze throughput without firing a missile.'
+            : 'A second cyber front means attackers can preserve disruption even if one node is contained, so recovery planning must cover dependent infrastructure as well.'
+          ,
+          accent: '#22d3ee',
+        },
+        {
+          id: `scene-${currentSceneId}-prevention`,
+          kind: 'prevention',
+          label: 'Prevention Move',
+          headline: 'Contain the cyber foothold and reduce repeatable choke-point exposure.',
+          detail: 'Push emergency segmentation on exposed ICS devices, stand up manual lock and power continuity procedures, and pre-designate alternate maritime or overland channels before attackers can re-establish persistence.',
+          accent: '#00ff88',
+        },
+      ];
+    case 6:
+      return [
+        {
+          id: 'scene-6-impact',
+          kind: 'impact',
+          label: 'Navigation Impact',
+          headline: 'GPS spoofing is degrading route assurance for live sustainment traffic.',
+          detail: 'A 4.2nm deviation on CONVOY-BRAVO creates collision, delay, and corridor-exit risk that can compound earlier kinetic and cyber disruptions.',
+          accent: '#a78bfa',
+        },
+        {
+          id: 'scene-6-change',
+          kind: 'change',
+          label: 'Control Change',
+          headline: 'The disruption model has shifted from blocking routes to silently bending them.',
+          detail: 'IRGC-EW interference means vessels may appear mobile while still being operationally displaced, which hides supply degradation inside apparently normal movement.',
+          accent: '#22d3ee',
+        },
+        {
+          id: 'scene-6-prevention',
+          kind: 'prevention',
+          label: 'Prevention Move',
+          headline: 'Make navigation resilience part of the logistics plan, not a fallback after compromise.',
+          detail: 'Mandate INS cross-check procedures, spoofing alarms, escorted navigation corridors, and authenticated waypoint validation before future convoys enter EW-exposed water.',
+          accent: '#00ff88',
+        },
+      ];
+    case 7:
+      return [
+        {
+          id: 'scene-7-impact',
+          kind: 'impact',
+          label: 'Theater Impact',
+          headline: 'Multiple attack vectors are now converging on the same supply web.',
+          detail: 'HAWK-I has enough fused evidence to show that canal disruption, convoy attacks, and navigation spoofing are all compressing the same resupply timeline for UNIT-DELTA and UNIT-FOXTROT.',
+          accent: '#ff1e3c',
+        },
+        {
+          id: 'scene-7-change',
+          kind: 'change',
+          label: 'Assessment Change',
+          headline: 'The problem has matured from incident response into campaign-level supply protection.',
+          detail: 'With three actors and ten datasets aligned, the system can now prioritize which routes, units, and interventions matter most instead of reacting feed-by-feed.',
+          accent: '#22d3ee',
+        },
+        {
+          id: 'scene-7-prevention',
+          kind: 'prevention',
+          label: 'Prevention Move',
+          headline: 'Use the generated COAs to create recurrence barriers, not just one-time fixes.',
+          detail: 'Pair escort, cyber eviction, and alternate-route activation with standing triggers so similar threat patterns automatically force route hardening, backup lift, and chokepoint contingency actions.',
+          accent: '#00ff88',
+        },
+      ];
+    case 8:
+      return [
+        {
+          id: 'scene-8-impact',
+          kind: 'impact',
+          label: 'Mitigation Impact',
+          headline: 'Approved actions are beginning to restore supply continuity before stock thresholds are crossed.',
+          detail: 'USS CARNEY escort, EAGLE-01 airlift, and the CNO response reduce the chance that one compromised route cascades into theater-wide shortfalls.',
+          accent: '#00ff88',
+        },
+        {
+          id: 'scene-8-change',
+          kind: 'change',
+          label: 'Execution Change',
+          headline: 'The session has moved from recommendation to active supply-chain intervention.',
+          detail: 'Assets are now repositioning in real time, which means the dashboard should emphasize execution effects and residual risk instead of initial detection alone.',
+          accent: '#0ea5e9',
+        },
+        {
+          id: 'scene-8-prevention',
+          kind: 'prevention',
+          label: 'Prevention Move',
+          headline: 'Institutionalize these actions as rapid-response playbooks.',
+          detail: 'Convert the approved escort, air bridge, and CNO sequences into pre-authorized drills so future disruptions trigger mitigation earlier and with less command delay.',
+          accent: '#ffb800',
+        },
+      ];
+    case 9:
+      return [
+        {
+          id: 'scene-9-impact',
+          kind: 'impact',
+          label: 'Recovery Impact',
+          headline: 'Restored canal control is reopening throughput and reducing accumulated backlog risk.',
+          detail: 'As VSL-004 and VSL-008 regain transit clearance and EAGLE-01 offloads in Djibouti, the supply chain starts recovering both speed and redundancy.',
+          accent: '#00ff88',
+        },
+        {
+          id: 'scene-9-change',
+          kind: 'change',
+          label: 'Recovery Change',
+          headline: 'The operating picture has shifted from disruption management to throughput recovery.',
+          detail: 'The key question is no longer whether shipments can move, but how fast queued cargo, alternate routes, and downstream units can normalize.',
+          accent: '#22d3ee',
+        },
+        {
+          id: 'scene-9-prevention',
+          kind: 'prevention',
+          label: 'Prevention Move',
+          headline: 'Use the recovery window to harden the network before attackers re-enter.',
+          detail: 'Keep cyber watch on cleaned SCADA nodes, retain alternate transport activation thresholds, and capture the route-diversion decisions that prevented repeat congestion shock.',
+          accent: '#ffb800',
+        },
+      ];
+    case 10:
+      return [
+        {
+          id: 'scene-10-impact',
+          kind: 'impact',
+          label: 'Stability Impact',
+          headline: 'Supply-line risk has shifted from critical disruption to controlled stability.',
+          detail: 'Escorted maritime flow, restored Suez throughput, and active alternate routes have stabilized the units that were closest to critical shortage.',
+          accent: '#00ff88',
+        },
+        {
+          id: 'scene-10-change',
+          kind: 'change',
+          label: 'Posture Change',
+          headline: 'The theater now has a more resilient logistics posture than it had at the start of the incident.',
+          detail: 'Air bridge, rail alternatives, and hardened convoy procedures create multiple ways to absorb future shocks instead of relying on a single uninterrupted sea route.',
+          accent: '#22d3ee',
+        },
+        {
+          id: 'scene-10-prevention',
+          kind: 'prevention',
+          label: 'Prevention Move',
+          headline: 'Prevent recurrence by keeping resilience measures alive after the crisis fades.',
+          detail: 'Maintain watch on Suez cyber nodes, preserve escort and EW trigger criteria, and keep alternate-route rehearsal active so the next disruption is absorbed before it becomes a theater-level shortage.',
+          accent: '#ffb800',
+        },
+      ];
+    default:
+      return [
+        {
+          id: `scene-${currentSceneId}-impact`,
+          kind: 'impact',
+          label: 'Operational Impact',
+          headline: `${currentLabel || 'Current activity'} is influencing logistics flow across the theater.`,
+          detail: 'HAWK-I is correlating route pressure, threat activity, and resupply exposure to determine which supply lines are most at risk.',
+          accent: '#ff1e3c',
+        },
+        {
+          id: `scene-${currentSceneId}-change`,
+          kind: 'change',
+          label: 'Status Change',
+          headline: 'The supply picture is being updated as new mission data arrives.',
+          detail: 'As fresh maritime, cyber, and intel signals enter the graph, the dashboard revises route confidence and downstream readiness assumptions.',
+          accent: '#22d3ee',
+        },
+        {
+          id: `scene-${currentSceneId}-prevention`,
+          kind: 'prevention',
+          label: 'Prevention Move',
+          headline: 'Recommended actions focus on absorbing disruption before it expands.',
+          detail: 'Pre-planned alternates, earlier triggers, and cross-domain monitoring reduce the chance that future incidents cascade into unit-level shortages.',
+          accent: '#00ff88',
+        },
+      ];
+  }
+}
+
 // ---------------------------------------------------------------------------
 // COA Panel
 // ---------------------------------------------------------------------------
@@ -72,6 +364,17 @@ function CoaPanel() {
   const { demoState } = useDemo();
   const items   = demoState.coaItems;
   const started = demoState.running || demoState.complete || demoState.currentScene > 0;
+  const currentScene = getSceneById(demoState.currentScene);
+  const sceneElapsed = currentScene ? Math.max(0, demoState.elapsedMs - currentScene.startMs) : 0;
+  const sceneDuration = currentScene ? Math.max(1, getSceneDurationMs(currentScene.id)) : 1;
+  const sceneProgress = Math.min(1, sceneElapsed / sceneDuration);
+  const allInsights = buildSupplyChainInsights(demoState.currentScene, demoState.sceneLabel);
+  const revealCount = demoState.complete
+    ? allInsights.length
+    : currentScene
+      ? Math.max(1, Math.min(allInsights.length, Math.ceil(sceneProgress * allInsights.length)))
+      : 0;
+  const visibleInsights = allInsights.slice(0, revealCount);
 
   return (
     <div className="flex flex-col h-full bg-black/20">
@@ -92,12 +395,70 @@ function CoaPanel() {
           </div>
         ) : (
           <div className="p-2 flex flex-col gap-2">
+            {visibleInsights.length > 0 && (
+              <SupplyChainInsightStream
+                insights={visibleInsights}
+                totalCount={allInsights.length}
+                currentSceneId={demoState.currentScene}
+              />
+            )}
             {items.map(item => (
               <CoaCard key={item.id} item={item} />
             ))}
           </div>
         )}
       </ScrollArea>
+    </div>
+  );
+}
+
+function SupplyChainInsightStream({
+  insights,
+  totalCount,
+  currentSceneId,
+}: {
+  insights: GeneratedInsight[];
+  totalCount: number;
+  currentSceneId: number;
+}) {
+  return (
+    <div className="border border-[#00ff8826] bg-[#04120d]">
+      <div className="flex items-center justify-between gap-2 px-2 py-1.5 border-b border-[#00ff8818] bg-[#00ff8808]">
+        <div className="min-w-0">
+          <div className="text-[8px] font-mono tracking-[0.28em] text-[#00ff88]">AI SUPPLY-CHAIN INSIGHTS</div>
+          <div className="text-[9px] text-[#7ee7b8] font-sans">
+            Session-linked impacts, changes, and prevention guidance for active logistics disruption.
+          </div>
+        </div>
+        <div className="shrink-0 text-[8px] font-mono px-1.5 py-0.5 border border-[#00ff8844] text-[#00ff88] bg-[#00ff8810]">
+          SCN {String(currentSceneId).padStart(2, '0')} • {insights.length}/{totalCount}
+        </div>
+      </div>
+      <div className="p-2 flex flex-col gap-1.5">
+        {insights.map(insight => (
+          <InsightCard key={insight.id} insight={insight} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function InsightCard({ insight }: { insight: GeneratedInsight }) {
+  const meta = INSIGHT_META[insight.kind];
+
+  return (
+    <div
+      className="border px-2 py-1.5 bg-black/45 animate-in fade-in duration-500"
+      style={{ borderColor: `${insight.accent}55`, boxShadow: `inset 0 0 0 1px ${insight.accent}12` }}
+    >
+      <div className="flex items-center gap-1.5 text-[7px] font-mono tracking-[0.24em] uppercase mb-1">
+        <span style={{ color: insight.accent }}>{meta.icon}</span>
+        <span style={{ color: insight.accent }}>{meta.label}</span>
+        <span className="text-[#3f6f58]">/</span>
+        <span className="text-[#8cbfa7]">{insight.label}</span>
+      </div>
+      <div className="text-[10px] font-semibold text-white leading-snug">{insight.headline}</div>
+      <div className="text-[9px] text-[#9ab3a5] leading-relaxed mt-1">{insight.detail}</div>
     </div>
   );
 }
@@ -269,6 +630,7 @@ function OntologyPanel() {
       const t = setTimeout(() => setAnimating(false), 600);
       return () => clearTimeout(t);
     }
+    return undefined;
   }, [demoState.currentScene]);
 
   const datasetCounts = edges.reduce<Record<string, number>>((acc, e) => {

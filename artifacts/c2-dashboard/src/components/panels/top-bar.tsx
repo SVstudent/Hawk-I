@@ -5,7 +5,7 @@ import { AlertCircle, Activity, Crosshair, Radar, ShieldAlert, Cpu } from 'lucid
 
 export function TopBar() {
   const { data: summary, isLoading, isError } = useGetDashboardSummary({
-    query: { refetchInterval: 5000 }
+    query: { refetchInterval: 5000 } as any,
   });
   
   const [time, setTime] = useState(new Date());

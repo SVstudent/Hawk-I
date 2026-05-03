@@ -81,9 +81,9 @@ function mergeTrackUpdates(incoming: DemoTrackUpdate[]): DemoTrackUpdate[] {
   return Array.from(map.values());
 }
 
-function mergeById<T extends { [key: string]: unknown }>(items: T[], idKey: string): T[] {
+function mergeById<T, K extends keyof T>(items: T[], idKey: K): T[] {
   const map = new Map<string, T>();
-  for (const item of items) map.set(String(item[idKey]), item);
+  for (const item of items) map.set(String(item[idKey] ?? ''), item);
   return Array.from(map.values());
 }
 
