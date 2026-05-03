@@ -1,0 +1,539 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: C2 Dashboard API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: tracks
+    description: Radar track operations
+  - name: shodan
+    description: Shodan threat intelligence
+  - name: intel
+    description: Intelligence feed
+  - name: dashboard
+    description: Dashboard summary
+  - name: ontology
+    description: Palantir Ontology graph and AI COA
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /tracks:
+    get:
+      operationId: listTracks
+      tags: [tracks]
+      summary: List all active radar tracks
+      responses:
+        "200":
+          description: List of tracks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Track"
+
+  /shodan/threats:
+    get:
+      operationId: listShodanThreats
+      tags: [shodan]
+      summary: Live ICS/SCADA vulnerabilities from Shodan
+      parameters:
+        - in: query
+          name: query
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Threat intelligence results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShodanResponse"
+
+  /intel/feed:
+    get:
+      operationId: getIntelFeed
+      tags: [intel]
+      summary: Intelligence feed from Exa search
+      parameters:
+        - in: query
+          name: query
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Intelligence feed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntelFeedResponse"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Dashboard overview summary stats
+      responses:
+        "200":
+          description: Summary stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /ontology/graph:
+    get:
+      operationId: getOntologyGraph
+      tags: [ontology]
+      summary: Palantir relational entity graph
+      responses:
+        "200":
+          description: Entity graph nodes and edges
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OntologyGraph"
+
+  /ontology/coa:
+    get:
+      operationId: getCoursesOfAction
+      tags: [ontology]
+      summary: AI-generated Courses of Action
+      responses:
+        "200":
+          description: AI COA recommendations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoaResponse"
+
+  /ontology/status:
+    get:
+      operationId: getOntologyStatus
+      tags: [ontology]
+      summary: Palantir pipeline connection status
+      responses:
+        "200":
+          description: Connection and pipeline status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OntologyStatus"
+
+  /chat:
+    post:
+      operationId: postChat
+      tags: [chat]
+      summary: Commander RAG chat — query the battlespace with natural language
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+      responses:
+        "200":
+          description: AI tactical response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResponse"
+
+  /trigger_emergency:
+    post:
+      operationId: triggerEmergency
+      tags: [chat]
+      summary: Trigger a kinetic strike emergency event and generate tactical leads
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmergencyRequest"
+      responses:
+        "200":
+          description: Emergency acknowledged + tactical leads generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmergencyResponse"
+
+  /tactical_leads:
+    get:
+      operationId: getTacticalLeads
+      tags: [chat]
+      summary: Get latest AI-generated tactical leads from emergency triggers
+      responses:
+        "200":
+          description: Current tactical leads
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TacticalLeadsResponse"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+
+    Track:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        type:
+          type: string
+          enum: [friendly, hostile, unknown, neutral]
+        lat:
+          type: number
+        lng:
+          type: number
+        altitude:
+          type: number
+        speed:
+          type: number
+        heading:
+          type: number
+        status:
+          type: string
+        timestamp:
+          type: string
+      required: [id, label, type, lat, lng, altitude, speed, heading, status, timestamp]
+
+    ShodanThreat:
+      type: object
+      properties:
+        ip:
+          type: string
+        port:
+          type: integer
+        org:
+          type: string
+        location:
+          type: string
+        product:
+          type: string
+        vulnerabilities:
+          type: array
+          items:
+            type: string
+        severity:
+          type: string
+          enum: [critical, high, medium, low]
+        lat:
+          type: number
+        lng:
+          type: number
+        timestamp:
+          type: string
+      required: [ip, port, severity, timestamp]
+
+    ShodanResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShodanThreat"
+        query:
+          type: string
+      required: [total, results, query]
+
+    IntelItem:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        url:
+          type: string
+        source:
+          type: string
+        summary:
+          type: string
+        publishedDate:
+          type: string
+        score:
+          type: number
+        category:
+          type: string
+          enum: [threat, vulnerability, geopolitical, cyber, kinetic, other]
+      required: [id, title, url, source, summary, publishedDate, score, category]
+
+    IntelFeedResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/IntelItem"
+        query:
+          type: string
+      required: [total, items, query]
+
+    DashboardSummary:
+      type: object
+      properties:
+        activeTracksCount:
+          type: integer
+        friendlyCount:
+          type: integer
+        hostileCount:
+          type: integer
+        unknownCount:
+          type: integer
+        threatCount:
+          type: integer
+        criticalThreatsCount:
+          type: integer
+        intelItemsCount:
+          type: integer
+        systemStatus:
+          type: string
+          enum: [nominal, degraded, critical]
+        lastUpdated:
+          type: string
+      required: [activeTracksCount, friendlyCount, hostileCount, unknownCount, threatCount, criticalThreatsCount, intelItemsCount, systemStatus, lastUpdated]
+
+    OntologyNode:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        type:
+          type: string
+          enum: [threat, vessel, unit, infrastructure, actor, event]
+        properties:
+          type: object
+          additionalProperties: true
+        severity:
+          type: string
+          enum: [critical, high, medium, low, info]
+      required: [id, label, type]
+
+    OntologyEdge:
+      type: object
+      properties:
+        id:
+          type: string
+        source:
+          type: string
+        target:
+          type: string
+        relation:
+          type: string
+        weight:
+          type: number
+      required: [id, source, target, relation]
+
+    OntologyGraph:
+      type: object
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/OntologyNode"
+        edges:
+          type: array
+          items:
+            $ref: "#/components/schemas/OntologyEdge"
+        palantirConnected:
+          type: boolean
+        lastSyncedAt:
+          type: string
+      required: [nodes, edges, palantirConnected]
+
+    CoaItem:
+      type: object
+      properties:
+        id:
+          type: string
+        priority:
+          type: integer
+        title:
+          type: string
+        action:
+          type: string
+        rationale:
+          type: string
+        relatedEntities:
+          type: array
+          items:
+            type: string
+        confidence:
+          type: number
+        urgency:
+          type: string
+          enum: [immediate, high, medium, low, monitor]
+        generatedAt:
+          type: string
+      required: [id, priority, title, action, rationale, confidence, urgency, generatedAt]
+
+    CoaResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CoaItem"
+        modelVersion:
+          type: string
+        palantirConnected:
+          type: boolean
+        generatedAt:
+          type: string
+      required: [items, palantirConnected, generatedAt]
+
+    OntologyStatus:
+      type: object
+      properties:
+        palantirConnected:
+          type: boolean
+        palantirUrl:
+          type: string
+        datasetRid:
+          type: string
+        shodanConnected:
+          type: boolean
+        exaConnected:
+          type: boolean
+        batchQueueDepth:
+          type: integer
+        lastFlushAt:
+          type: string
+        pipelineStatus:
+          type: string
+          enum: [awaiting_config, connecting, live, error, disconnected]
+      required: [palantirConnected, shodanConnected, exaConnected, batchQueueDepth, pipelineStatus]
+
+    ChatRequest:
+      type: object
+      properties:
+        query:
+          type: string
+        sessionId:
+          type: string
+      required: [query]
+
+    ChatResponse:
+      type: object
+      properties:
+        answer:
+          type: string
+        contextUsed:
+          type: boolean
+        modelVersion:
+          type: string
+        generatedAt:
+          type: string
+      required: [answer, contextUsed, modelVersion, generatedAt]
+
+    EmergencyRequest:
+      type: object
+      properties:
+        description:
+          type: string
+        location:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+
+    TacticalLead:
+      type: object
+      properties:
+        id:
+          type: string
+        priority:
+          type: integer
+        title:
+          type: string
+        action:
+          type: string
+        rationale:
+          type: string
+        riskLevel:
+          type: string
+          enum: [CRITICAL, HIGH, MEDIUM, LOW]
+        timeHorizon:
+          type: string
+        unitOfAction:
+          type: string
+        generatedAt:
+          type: string
+      required: [id, priority, title, action, rationale, riskLevel, timeHorizon, unitOfAction, generatedAt]
+
+    EmergencyResponse:
+      type: object
+      properties:
+        eventId:
+          type: string
+        status:
+          type: string
+        incidentDescription:
+          type: string
+        location:
+          type: string
+        tacticalLeads:
+          type: array
+          items:
+            $ref: "#/components/schemas/TacticalLead"
+        triggeredAt:
+          type: string
+        emergencyCount:
+          type: integer
+      required: [eventId, status, incidentDescription, tacticalLeads, triggeredAt, emergencyCount]
+
+    TacticalLeadsResponse:
+      type: object
+      properties:
+        leads:
+          type: array
+          items:
+            $ref: "#/components/schemas/TacticalLead"
+        lastEmergencyAt:
+          type: string
+        emergencyCount:
+          type: integer
+        hasActiveEmergency:
+          type: boolean
+      required: [leads, emergencyCount, hasActiveEmergency]
